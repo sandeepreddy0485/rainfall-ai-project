@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+
+# ML models (optional if large)
+*.h5
+*.pt
+*.pkl
+
+# Node
+node_modules/
+
+# React build
+build/
+
+# OS
+.DS_Store
+Thumbs.db
