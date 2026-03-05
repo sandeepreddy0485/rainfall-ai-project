@@ -12,9 +12,13 @@ env/
 .env
 
 # ML models (optional if large)
+# Except for backend production models
 *.h5
 *.pt
 *.pkl
+!backend/models/*.h5
+!backend/models/*.pkl
+!backend/models/*.keras
 
 # Node
 node_modules/
