@@ -94,8 +94,9 @@ from app.config import Settings
 settings = Settings()
 logger = logging.getLogger("app.weather")
 
-_current_cache = TTLCache(maxsize=1000, ttl=1800)
-_historical_cache = TTLCache(maxsize=1000, ttl=7200)
+# simple in‑memory caches
+_current_cache = TTLCache(maxsize=1000, ttl=1800)      # 30 minutes
+_historical_cache = TTLCache(maxsize=1000, ttl=7200)   # 2 hours
 
 
 @cached(cache=_current_cache)
@@ -106,7 +107,13 @@ def fetch_current_weather(lat: float, lon: float):
         "longitude": lon,
         "current_weather": True,
         "hourly": ["temperature_2m", "precipitation", "relativehumidity_2m"],
-        "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum", "sunrise", "sunset"],
+        "daily": [
+            "temperature_2m_max",
+            "temperature_2m_min",
+            "precipitation_sum",
+            "sunrise",
+            "sunset"
+        ],
         "forecast_days": 7,
         "timezone": "auto"
     }
@@ -138,4 +145,37 @@ def fetch_current_weather(lat: float, lon: float):
         return {"error": "Internal server error"}
 
 
-# fetch_historical_weather remains the same...
+@cached(cache=_historical_cache)
+def fetch_historical_weather(lat: float, lon: float, days: int = 180):
+    end = dt.datetime.now()
+    start = end - dt.timedelta(days=days)
+
+    url = "https://archive-api.open-meteo.com/v1/archive"
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "start_date": start.strftime("%Y-%m-%d"),
+        "end_date": end.strftime("%Y-%m-%d"),
+        "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum"],
+        "timezone": "auto"
+    }
+
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if "daily" in data:
+                df = pd.DataFrame({
+                    "date": pd.to_datetime(data["daily"]["time"]),
+                    "temp_max": data["daily"]["temperature_2m_max"],
+                    "temp_min": data["daily"]["temperature_2m_min"],
+                    "precipitation": data["daily"]["precipitation_sum"]
+                })
+                df["temp_avg"] = (df["temp_max"] + df["temp_min"]) / 2
+                return df
+        else:
+            logger.warning(f"Historical weather API returned {response.status_code}")
+    except Exception as e:
+        logger.exception(f"Error fetching historical weather: {e}")
+
+    return None
