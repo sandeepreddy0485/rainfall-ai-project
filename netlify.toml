@@ -2,6 +2,13 @@
   command = "cd frontend && npm install && npm run build"
   publish = "frontend/build"
 
+[dev]
+  command = "cd frontend && npm start"
+  targetPort = 3000
+  port = 8889
+  publish = "frontend/build"
+  framework = "#custom"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
